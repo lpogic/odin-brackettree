@@ -1,32 +1,34 @@
 package brackettree
 
 import "core:fmt"
-import "core:reflect"
 import "core:strings"
 
+
 main :: proc() {
-    // escaping_test();
-    // parsing_encoding_test();
-
-    a : any;
-    a = "echoja";
-    
-    t := any_cast(&a, string);
-    T := strings.to_upper(t^);
-    fmt.println(t^);
-    fmt.println(T);
-    any_accept("str");
-    any_accept(1);
+    fmt.println("\n\n################### TREE BUILD TEST ###################\n");
+    tree_test();
+    fmt.println("\n\n################ STRING ESCAPING TEST #################\n");
+    escaping_test();
+    fmt.println("\n\n########## BRACKETTREE PARSING ENCODING TEST ##########\n");
+    parsing_encoding_test();
 }
 
-any_accept :: proc(a : any) {
-    fmt.println(a.id);
-    return;
-}
+@(private)
+tree_test :: proc() {
+    tree := tree_make(int);
 
-any_cast :: proc(a : ^any, $T : typeid) -> ^T {
-    if a.id == T do return transmute(^T)a.data;
-    return nil;
+    tree_set(&tree, ROOT, 0);
+    child := tree_add_child_value(&tree, ROOT, 1);
+    tree_add_child_value(&tree, ROOT, 2);
+    tree_add_child_value(&tree, child, 5);
+    tree_add_child_value(&tree, child, 6);
+
+    fmt.println(tree_find_child(&tree, child, 6));
+
+    fmt.println(to_string(&tree, false, proc(i : int) -> string {
+        return strings.repeat("X", i);
+    }));
+    tree_clear(&tree);
 }
 
 @(private)
@@ -44,7 +46,19 @@ escaping_test :: proc() {
 
 @(private)
 parsing_encoding_test :: proc() {
-    node := parse("1[2]3[4[5][6[10][11][~~|very[]sophisticated|~|string|~~]][7]]");
-    fmt.println(to_string(node, false));
-    destroy(node);
+    tree := parse(`
+    1[2]
+    3[
+        4[5]
+        [
+            6[10]
+            [11]
+            [~~| very [] sophisticated |~| string |~~]
+        ]
+        [7]
+    ]
+    `);
+    fmt.println(to_string(&tree));
+    fmt.println(to_string(&tree, true));
+    tree_clear(&tree);
 }

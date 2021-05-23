@@ -3,257 +3,54 @@ package brackettree
 import "core:strings"
 import "core:unicode/utf8"
 
-portal_rune :: '|';
-branch_rune :: '[';
-root_rune :: ']';
+_PORTAL_RUNE :: '|';
+_BRANCH_RUNE :: '[';
+_ROOT_RUNE :: ']';
 
-
-to_string :: proc(node : ^Node, compress := false, string_encoder := escape_string) -> string {
-    builder := strings.make_builder();
-    if compress do build_compressed_string(&builder, node, string_encoder);
-    else do build_string(&builder, node, 0, string_encoder);
-    str := strings.to_string(builder);
-    return str;
-}
-
-@(private)
-build_string :: proc(builder : ^strings.Builder, node : ^Node, depth : int, 
-                    string_encoder : proc(str: string, escape_rune := '~') -> string) {
-    switch t in node.val {
-        case rawptr:
-        case string:
-            strings.write_string_builder(builder, string_encoder(t));
-        case map[^Node]^Node:
-            tabs := strings.repeat("\t", depth);
-            for k, v in t {
-                if len(t) > 1 {
-                    strings.write_string_builder(builder, tabs);
-                }
-                build_string(builder, k, depth + 1, string_encoder);
-                switch t1 in v.val {
-                    case rawptr:
-                        if len(t) > 1 {
-                            strings.write_rune_builder(builder, branch_rune);
-                            strings.write_rune_builder(builder, root_rune);
-                            strings.write_rune_builder(builder, '\n');
-                        } else {
-                            strings.write_rune_builder(builder, ' ');
-                        }
-                    case string:
-                        strings.write_rune_builder(builder, branch_rune);
-                        strings.write_rune_builder(builder, ' ');
-                        strings.write_string_builder(builder, string_encoder(t1));
-                        strings.write_rune_builder(builder, ' ');
-                        strings.write_rune_builder(builder, root_rune);
-                        strings.write_rune_builder(builder, '\n');
-                    case map[^Node]^Node:
-                        if len(t1) > 1 {
-                            strings.write_rune_builder(builder, branch_rune);
-                            strings.write_rune_builder(builder, '\n');
-                            build_string(builder, v, depth + 1, string_encoder);
-                            strings.write_string_builder(builder, tabs);
-                            strings.write_rune_builder(builder, root_rune);
-                            strings.write_rune_builder(builder, '\n');
-                        } else {
-                            strings.write_rune_builder(builder, branch_rune);
-                            strings.write_rune_builder(builder, ' ');
-                            build_string(builder, v, depth + 1, string_encoder);
-                            strings.write_rune_builder(builder, ' ');
-                            strings.write_rune_builder(builder, root_rune);
-                            strings.write_rune_builder(builder, '\n');
-                        }
-                }
-            }
-    }
-}
-
-@(private)
-build_compressed_string :: proc(builder : ^strings.Builder, node : ^Node,
-                    string_encoder : proc(str: string, escape_rune := '~') -> string) {
-    switch t in node.val {
-        case rawptr:
-        case string:
-            strings.write_string_builder(builder, string_encoder(t));
-        case map[^Node]^Node:
-            for k, v in t {
-                build_compressed_string(builder, k, string_encoder);
-                switch t1 in v.val {
-                    case rawptr:
-                        if len(t) > 1 {
-                            strings.write_rune_builder(builder, branch_rune);
-                            strings.write_rune_builder(builder, root_rune);
-                        }
-                    case string:
-                        strings.write_rune_builder(builder, branch_rune);
-                        strings.write_string_builder(builder, string_encoder(t1));
-                        strings.write_rune_builder(builder, root_rune);
-                    case map[^Node]^Node:
-                        if len(t1) > 1 {
-                            strings.write_rune_builder(builder, branch_rune);
-                            build_compressed_string(builder, v, string_encoder);
-                            strings.write_rune_builder(builder, root_rune);
-                        } else {
-                            strings.write_rune_builder(builder, branch_rune);
-                            build_compressed_string(builder, v, string_encoder);
-                            strings.write_rune_builder(builder, root_rune);
-                        }
-                }
-            }
-    }
-}
-
-escape_string :: proc(str: string, escape_rune : rune) -> string {
-
-    escapes := -1;
-    max_escapes := -1;
-
-    for c in str {
-        if escapes > 0 {
-            if(c == escape_rune) {
-                escapes += 1;
-            } else {
-                if max_escapes < escapes {
-                    max_escapes = escapes;
-                }
-                if c == portal_rune {
-                    escapes = 1;
-                } else {
-                    escapes = 0;
-                }
-            }
-        } else {
-            switch c {
-                case portal_rune: escapes = 1;
-                case branch_rune, root_rune: escapes = 0;
-            }
-        }
-	}
-    escapes = max_escapes > escapes ? max_escapes : escapes;
-
-    if escapes == -1 {
-        if len(str) == 0 || strings.is_space(utf8.rune_at(str, 0)) || strings.is_space(utf8.rune_at(str, len(str) - 1)) {
-            builder := strings.make_builder(len(str) + 2);
-            strings.write_rune_builder(&builder, portal_rune);
-            strings.write_string_builder(&builder, str);
-            strings.write_rune_builder(&builder, portal_rune);
-            return strings.to_string(builder);
-        }
-        return str;
-    }
-    escape_pad := strings.repeat(utf8.runes_to_string([]rune{escape_rune}), escapes);
-    builder := strings.make_builder(len(str) + 2 * len(escape_pad) + 2);
-    strings.write_string_builder(&builder, escape_pad);
-    strings.write_rune_builder(&builder, portal_rune);
-    strings.write_string_builder(&builder, str);
-    strings.write_rune_builder(&builder, portal_rune);
-    strings.write_string_builder(&builder, escape_pad);
-    return strings.to_string(builder);
-}
-
-
-Node :: struct {
-    val : Value,
-}
-
-Value :: union {
-    rawptr,
-    string,
-    map[^Node]^Node,
-}
-
-Dimension :: enum {
+Dimension :: enum{
     TREE,
     TEXT,
 }
 
-destroy :: proc(node : ^Node, allocator := context.allocator) {
-    switch v in node.val {
-        case map[^Node]^Node:
-            for key, val in v {
-                destroy(key, allocator);
-                destroy(val, allocator);
-            }
-            delete(v);
-        case string:
-            delete(v, allocator);
-        case rawptr:
-    }
-    free(node, allocator);
-}
-
-parse :: proc(str :string) -> ^Node {
-    branch : [dynamic]^Node;
-    branchSize := 0;
-    node := new(Node);
+parse :: proc(str :string) -> Tree(string) {
+    branch : [dynamic]int;
+    branch_size := 0;
+    tree := tree_make(string);
+    node := 0;
     dimension := Dimension.TREE;
     primary_builder := strings.make_builder(); 
     secondary_builder := strings.make_builder();
     primary_builder_empty, secondary_builder_empty := true, true;
     portal : string;
 
-    inset_string :: proc(node : ^Node, key : string, value : ^Node) {
-        n := new(Node);
-        n.val = key;
-        inset_node(node, n, value);
-    }
-
-    inset_node :: proc(node : ^Node, key : ^Node, value : ^Node) {
-        switch v in node.val {
-            case map[^Node]^Node:
-                m := make(map[^Node]^Node);
-                for k, v1 in v {
-                    m[k] = v1;
-                }
-                m[key] = value;
-                node.val = m;
-            case string:
-                m := make(map[^Node]^Node);
-                n := new(Node);
-                n.val = v;
-                m[n] = new(Node);
-                m[key] = value;
-                node.val = m;
-            case rawptr:
-                m := make(map[^Node]^Node);
-                m[key] = value;
-                node.val = m;
-            case:
-                m := make(map[^Node]^Node);
-                m[key] = value;
-                node.val = m;
-        }
-    }
-
-    inset :: proc{inset_string, inset_node};
-
     for r in str {
         if dimension == Dimension.TREE {
             switch r {
-                case branch_rune:
+                case _BRANCH_RUNE:
                     s := strings.trim_space(strings.to_string(primary_builder));
                     if len(s) > 0 {
                         strings.write_string(&secondary_builder, s);
                         secondary_builder_empty = false;
                     }
-                    newNode := new(Node);
+                    new_node : int;
                     if secondary_builder_empty {
-                        inset(node, new(Node), newNode);
+                        new_node = tree_add_child(&tree, node);
                     } else {
                         s = strings.to_string(secondary_builder);
-                        inset(node, s, newNode);
+                        new_node = tree_add_child_value(&tree, node, s);
                     }
-                    if branchSize >= len(branch) {
+                    if branch_size >= len(branch) {
                         append(&branch, node);
                     } else {
-                        branch[branchSize] = node;
+                        branch[branch_size] = node;
                     }
-                    branchSize += 1;
+                    branch_size += 1;
                     
-                    node = newNode;
+                    node = new_node;
                     strings.init_builder(&primary_builder);
                     strings.init_builder(&secondary_builder);
                     secondary_builder_empty = true;
-                case root_rune:
+                case _ROOT_RUNE:
                     s := strings.trim_space(strings.to_string(primary_builder));
                     if len(s) > 0 {
                         strings.write_string(&secondary_builder, s);
@@ -261,18 +58,18 @@ parse :: proc(str :string) -> ^Node {
                     }
                     if !secondary_builder_empty {
                         s = strings.to_string(secondary_builder);
-                        inset(node, s, new(Node));
+                        tree_add_child_value(&tree, node, s);
                     }
-                    if branchSize > 0 {
-                        branchSize -= 1;
-                        node = branch[branchSize];
+                    if branch_size > 0 {
+                        branch_size -= 1;
+                        node = branch[branch_size];
                     }
                     strings.init_builder(&primary_builder);
                     strings.init_builder(&secondary_builder);
                     secondary_builder_empty = true;
-                case portal_rune:
+                case _PORTAL_RUNE:
                     s := strings.trim_space(strings.to_string(primary_builder));
-                    portal = strings.concatenate([]string{utf8.runes_to_string([]rune{portal_rune}), s});
+                    portal = strings.concatenate([]string{utf8.runes_to_string([]rune{_PORTAL_RUNE}), s});
                     strings.init_builder(&primary_builder);
                     dimension = Dimension.TEXT;
                 case:
@@ -300,14 +97,153 @@ parse :: proc(str :string) -> ^Node {
             }
             if !secondary_builder_empty {
                 s = strings.to_string(secondary_builder);
-                inset(node, s, new(Node));
+                tree_set(&tree, node, s);
             }
         case .TEXT:
             s := strings.to_string(primary_builder);
             strings.write_string(&secondary_builder, s[:len(s)-len(portal)]);
             s = strings.to_string(secondary_builder);
-            inset(node, s, new(Node));
+            tree_set(&tree, node, s);
     }
 
-    return len(branch) > 0 ? branch[0] : node;
+    return tree;
+}
+
+to_string_escaped :: proc(tree : ^Tree(string), compress := false) -> string {
+    builder := strings.make_builder();
+    encoder := proc(str : string) -> string do return escape_string(str, '~');
+    if compress do build_compressed_string(&builder, tree, 0, encoder);
+    else do build_string(&builder, tree, 0, 0, encoder);
+    str := strings.to_string(builder);
+    return str;
+}
+
+to_string_any :: proc(tree : ^Tree($Value), compress := false, encoder : proc(value : Value) -> string) -> string {
+    builder := strings.make_builder();
+    if compress do build_compressed_string(&builder, tree, 0, encoder);
+    else do build_string(&builder, tree, 0, 0, encoder);
+    str := strings.to_string(builder);
+    return str;
+}
+
+to_string :: proc{to_string_escaped, to_string_any};
+
+@(private)
+build_string :: proc(builder : ^strings.Builder, tree : ^Tree($Value), key : int, depth : int, 
+                    encoder : proc(str: Value) -> string) {
+    using strings;
+    write_string_builder(builder, encoder(tree_get(tree, key)));
+    children := tree_get_children(tree, key);
+    if len(children) > 1 {
+        write_rune_builder(builder, _BRANCH_RUNE);
+        write_rune_builder(builder, '\n');
+        tabs := repeat("\t", depth + 1);
+        for child in tree_get_children(tree, key) {
+            write_string_builder(builder, tabs);
+            build_string(builder, tree, child, depth + 1, encoder);
+        }
+        write_string_builder(builder, repeat("\t", depth));
+        write_rune_builder(builder, _ROOT_RUNE);
+        write_rune_builder(builder, '\n');
+    } else if len(children) > 0 {
+        if len(tree_get_children(tree, children[0])) > 0 {
+            write_rune_builder(builder, _BRANCH_RUNE);
+            write_rune_builder(builder, '\n');
+            build_string(builder, tree, children[0], depth + 1, encoder);
+            write_string_builder(builder, repeat("\t", depth + 1));
+            write_rune_builder(builder, _ROOT_RUNE);
+            write_rune_builder(builder, '\n');
+        } else {
+            write_rune_builder(builder, _BRANCH_RUNE);
+            write_rune_builder(builder, ' ');
+            write_string_builder(builder, encoder(tree_get(tree, children[0])));
+            write_rune_builder(builder, ' ');
+            write_rune_builder(builder, _ROOT_RUNE);
+            write_rune_builder(builder, '\n');
+        }
+    } else {
+        write_rune_builder(builder, _BRANCH_RUNE);
+        write_rune_builder(builder, _ROOT_RUNE);
+        write_rune_builder(builder, '\n');
+    }
+}
+
+
+@(private)
+build_compressed_string :: proc(builder : ^strings.Builder, tree : ^Tree($Value), key : int, 
+                    encoder : proc(str: Value) -> string) {
+    using strings;
+    write_string_builder(builder, encoder(tree_get(tree, key)));
+    children := tree_get_children(tree, key);
+    if len(children) > 1 {
+        write_rune_builder(builder, _BRANCH_RUNE);
+        for child in tree_get_children(tree, key) {
+            build_compressed_string(builder, tree, child, encoder);
+        }
+        write_rune_builder(builder, _ROOT_RUNE);
+    } else if len(children) > 0 {
+        if len(tree_get_children(tree, children[0])) > 0 {
+            write_rune_builder(builder, _BRANCH_RUNE);
+            build_compressed_string  (builder, tree, children[0], encoder);
+            write_rune_builder(builder, _ROOT_RUNE);
+        } else {
+            write_rune_builder(builder, _BRANCH_RUNE);
+            write_string_builder(builder, encoder(tree_get(tree, children[0])));
+            write_rune_builder(builder, _ROOT_RUNE);
+        }
+    } else {
+        write_rune_builder(builder, _BRANCH_RUNE);
+        write_rune_builder(builder, _ROOT_RUNE);
+    }
+}
+
+escape_string :: proc(str: string, escape_rune : rune) -> string {
+
+    if len(str) == 0 do return str;
+    escapes := -1;
+    max_escapes := -1;
+
+    for c in str {
+        if escapes > 0 {
+            if(c == escape_rune) {
+                escapes += 1;
+            } else {
+                if max_escapes < escapes {
+                    max_escapes = escapes;
+                }
+                if c == _PORTAL_RUNE {
+                    escapes = 1;
+                } else {
+                    escapes = 0;
+                }
+            }
+        } else {
+            switch c {
+                case _PORTAL_RUNE: escapes = 1;
+                case _BRANCH_RUNE, _ROOT_RUNE: escapes = 0;
+            }
+        }
+	}
+    escapes = max_escapes > escapes ? max_escapes : escapes;
+
+    using strings;
+
+    if escapes == -1 {
+        if is_space(utf8.rune_at(str, 0)) || is_space(utf8.rune_at(str, len(str) - 1)) {
+            builder := make_builder(len(str) + 2);
+            write_rune_builder(&builder, _PORTAL_RUNE);
+            write_string_builder(&builder, str);
+            write_rune_builder(&builder, _PORTAL_RUNE);
+            return to_string(builder);
+        }
+        return str;
+    }
+    escape_pad := repeat(utf8.runes_to_string([]rune{escape_rune}), escapes);
+    builder := make_builder(len(str) + 2 * len(escape_pad) + 2);
+    write_string_builder(&builder, escape_pad);
+    write_rune_builder(&builder, _PORTAL_RUNE);
+    write_string_builder(&builder, str);
+    write_rune_builder(&builder, _PORTAL_RUNE);
+    write_string_builder(&builder, escape_pad);
+    return to_string(builder);
 }
