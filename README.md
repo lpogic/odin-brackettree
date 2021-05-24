@@ -4,6 +4,14 @@ Brackettree interface for Odin
 ## Brackettree
 Brackettree is a simple markup language that allows you to concisely express the structure of a tree.
 
+### Features
+<ul>
+  <li>Syntactically minimalist</li>
+  <li>Human readable</li>
+  <li>Whitespace insensitive</li>
+  <li>No type inference at the general level</li>
+</ul>
+
 ### Notation
 <ul>
 <li>branch_token = "["</li>
