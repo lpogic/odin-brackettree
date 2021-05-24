@@ -25,6 +25,6 @@ nodeE[ nodeF ]
 ```
 &#x21e7; 'nodeC' is a child of 'nodeB'. 'nodeB' and 'nodeD' are children of 'nodeA'. '[]' idiom after last child is optional. 'nodeF' is a child of 'nodeE'. 'nodeA' and 'nodeE' are children of root<br><br><br>
 ```| nodeG | [ nodeH ]``` &#x21e6; 'nodeH' is a child of ' nodeG '. Leading and trailing whitespaces are cleared unless text dimension is activated. A text dimension is opened by using '|' character<br><br><br>
-```|nodeJ | [ ~~| node|~ |~~ ]``` &#x21e6; 'nodeJ ' is a child of ' node|~ '. String which appear direct before '|' character is a portal password. Text dimension is closed by password preceded by '|' character. For ' node|~ ' portal password is '\~~' <br><br><br>
+```|nodeJ | [ ~~| node|~ |~~ ]``` &#x21e6; 'nodeJ ' is a child of ' node|~ '. String which appear direct before '|' character is a portal password. Text dimension is closed by password preceded by '|' character. For ' node|~ ' portal password is '\~~', for 'nodeJ ' - '' <br><br><br>
 
 
