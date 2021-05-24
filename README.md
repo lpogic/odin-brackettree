@@ -1,7 +1,19 @@
 # odin-brackettree
 Brackettree interface for Odin
 
-## Brackettree
+## Current features
+<ul>
+  <li>Parsing brackettree encoded string to internal tree of strings</li>
+  <li>Encoding generic tree to brackettree representation</li>
+  <li>Equipped with generic tree implementation</li>
+</ul>
+
+## Planned features
+<ul>
+  <li>Marshalling & unmarshalling</li>
+</ul>
+
+# Brackettree
 Brackettree is a simple markup language that allows you to concisely express the structure of a tree.
 
 ### Features
