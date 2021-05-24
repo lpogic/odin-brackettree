@@ -14,52 +14,62 @@ tree_make :: proc($T : typeid) -> Tree(T) {
     return Tree(T){};
 }
 
-tree_get :: proc(t: ^$T/Tree($Value), parent : int) -> (res: Value, ok: bool) #optional_ok {
-    return t.vals[parent];
+tree_get_value :: proc(t: ^$T/Tree($Value), id : int) -> (res: Value, ok: bool) #optional_ok {
+    return t.vals[id];
 }
 
-tree_get_default :: proc(t: $T/Tree($Value), parent : int, default: Value) -> (res: Value, ok: bool) #optional_ok {
-    if res, ok := t.vals[parent]; ok do return;
+tree_get_default :: proc(t: $T/Tree($Value), id : int, default: Value) -> (res: Value, ok: bool) #optional_ok {
+    if res, ok := t.vals[id]; ok do return;
     else do return default, false;
 }
 
-tree_set :: proc(t: ^$T/Tree($Value), parent : int, value: Value) {
-    t.vals[parent] = value;
+tree_set_value :: proc(t: ^$T/Tree($Value), id : int, value: Value) {
+    t.vals[id] = value;
 }
 
-tree_add_child :: proc(t: ^$T/Tree($Value), parent : int) -> (id : int) {
+tree_add_child :: proc(t: ^$T/Tree($Value), parent_id : int) -> (id : int) {
     t.id_provider += 1;
     id = t.id_provider;
-    if a, ok := t.indc[parent]; ok do append(a, id);
+    if a, ok := t.indc[parent_id]; ok do append(a, id);
     else {
         a := new([dynamic]int);
         append(a, id);
-        t.indc[parent] = a;
+        t.indc[parent_id] = a;
     }
     return;
 }
 
-tree_add_child_value :: proc(t: ^$T/Tree($Value), parent : int, value : Value) -> (id : int) {
-    child := tree_add_child(t, parent);
-    tree_set(t, child, value);
+tree_add_child_value :: proc(t: ^$T/Tree($Value), parent_id : int, value : Value) -> (id : int) {
+    child := tree_add_child(t, parent_id);
+    tree_set_value(t, child, value);
     return child;
 }
 
-tree_get_children :: proc(t: ^$T/Tree($Value), parent : int) -> [dynamic]int {
-    children := t.indc[parent];
-    return children == nil ? [dynamic]int{} : children^;
+tree_get_children :: proc(t: ^$T/Tree($Value), parent_id : int) -> ([dynamic]int, bool) #optional_ok {
+    children := t.indc[parent_id];
+    if children == nil {
+        return [dynamic]int{}, false;
+    } else {
+        return children^, true;
+    }
 }
 
-tree_find_child :: proc(t: ^$T/Tree($Value), parent : int, value : Value) -> (id : int, ok : bool) #optional_ok {
-    for ch in tree_get_children(t, parent) {
-        if tree_get(t, ch) == value do return ch, true;
+tree_find_child :: proc(t: ^$T/Tree($Value), parent_id : int, value : Value) -> (int, bool) #optional_ok {
+    for ch in tree_get_children(t, parent_id) {
+        if tree_get_value(t, ch) == value do return ch, true;
     }
     return -1, false;
 }
 
-tree_remove :: proc(t: ^$T/Tree($Value), parent : int) {
-    delete_key(&t.indc, parent);
-    delete_key(&t.vals, parent);
+tree_remove :: proc(t: ^$T/Tree($Value), id : int) {
+    if children, ok := t.indc[id]; ok {
+        for ch in children {
+            tree_remove(t, ch);    
+        }
+        free(children);
+        delete_key(&t.indc, id);
+    }
+    delete_key(&t.vals, id);
 }
 
 tree_clear :: proc(t: ^$T/Tree($Value)) {

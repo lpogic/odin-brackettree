@@ -7,9 +7,9 @@ import "core:strings"
 main :: proc() {
     fmt.println("\n\n################### TREE BUILD TEST ###################\n");
     tree_test();
-    fmt.println("\n\n################ STRING ESCAPING TEST #################\n");
+    fmt.println("\n\n################# STRING ESCAPE TEST ##################\n");
     escaping_test();
-    fmt.println("\n\n########## BRACKETTREE PARSING ENCODING TEST ##########\n");
+    fmt.println("\n\n############ BRACKETTREE PARSE ENCODE TEST ############\n");
     parsing_encoding_test();
 }
 
@@ -17,7 +17,7 @@ main :: proc() {
 tree_test :: proc() {
     tree := tree_make(int);
 
-    tree_set(&tree, ROOT, 0);
+    tree_set_value(&tree, ROOT, 0);
     child := tree_add_child_value(&tree, ROOT, 1);
     tree_add_child_value(&tree, ROOT, 2);
     tree_add_child_value(&tree, child, 5);
@@ -47,16 +47,16 @@ escaping_test :: proc() {
 @(private)
 parsing_encoding_test :: proc() {
     tree := parse(`
-    1[2]
-    3[
-        4[5]
-        [
-            6[10]
-            [11]
-            [~~| very [] sophisticated |~| string |~~]
+        1[2]
+        3[
+            4[5]
+            [
+                6[10]
+                [|escaped ]] string [[ |]
+                [  pwd| very [] sophisticated |~| string |pwd  ]
+            ]
+            [7]
         ]
-        [7]
-    ]
     `);
     fmt.println(to_string(&tree));
     fmt.println(to_string(&tree, true));

@@ -20,7 +20,7 @@ parse :: proc(str :string) -> Tree(string) {
     dimension := Dimension.TREE;
     primary_builder := strings.make_builder(); 
     secondary_builder := strings.make_builder();
-    primary_builder_empty, secondary_builder_empty := true, true;
+    secondary_builder_empty := true;
     portal : string;
 
     for r in str {
@@ -77,8 +77,8 @@ parse :: proc(str :string) -> Tree(string) {
             }
         } else if dimension == Dimension.TEXT {
             strings.write_rune_builder(&primary_builder, r);
-            portalStartIndex := strings.builder_len(primary_builder) - len(portal);
-            if portalStartIndex >= 0 && strings.has_suffix(strings.to_string(primary_builder), portal) {
+            portal_start_index := strings.builder_len(primary_builder) - len(portal);
+            if portal_start_index >= 0 && strings.has_suffix(strings.to_string(primary_builder), portal) {
                 s := strings.to_string(primary_builder);
                 strings.write_string(&secondary_builder, s[:len(s)-len(portal)]);
                 secondary_builder_empty = false;
@@ -97,13 +97,13 @@ parse :: proc(str :string) -> Tree(string) {
             }
             if !secondary_builder_empty {
                 s = strings.to_string(secondary_builder);
-                tree_set(&tree, node, s);
+                tree_set_value(&tree, node, s);
             }
         case .TEXT:
             s := strings.to_string(primary_builder);
-            strings.write_string(&secondary_builder, s[:len(s)-len(portal)]);
+            strings.write_string(&secondary_builder, s);
             s = strings.to_string(secondary_builder);
-            tree_set(&tree, node, s);
+            tree_set_value(&tree, node, s);
     }
 
     return tree;
@@ -118,7 +118,7 @@ to_string_escaped :: proc(tree : ^Tree(string), compress := false) -> string {
     return str;
 }
 
-to_string_any :: proc(tree : ^Tree($Value), compress := false, encoder : proc(value : Value) -> string) -> string {
+to_string_encoded :: proc(tree : ^Tree($Value), compress := false, encoder : proc(value : Value) -> string) -> string {
     builder := strings.make_builder();
     if compress do build_compressed_string(&builder, tree, 0, encoder);
     else do build_string(&builder, tree, 0, 0, encoder);
@@ -126,13 +126,13 @@ to_string_any :: proc(tree : ^Tree($Value), compress := false, encoder : proc(va
     return str;
 }
 
-to_string :: proc{to_string_escaped, to_string_any};
+to_string :: proc{to_string_escaped, to_string_encoded};
 
 @(private)
 build_string :: proc(builder : ^strings.Builder, tree : ^Tree($Value), key : int, depth : int, 
                     encoder : proc(str: Value) -> string) {
     using strings;
-    write_string_builder(builder, encoder(tree_get(tree, key)));
+    write_string_builder(builder, encoder(tree_get_value(tree, key)));
     children := tree_get_children(tree, key);
     if len(children) > 1 {
         write_rune_builder(builder, _BRANCH_RUNE);
@@ -156,7 +156,7 @@ build_string :: proc(builder : ^strings.Builder, tree : ^Tree($Value), key : int
         } else {
             write_rune_builder(builder, _BRANCH_RUNE);
             write_rune_builder(builder, ' ');
-            write_string_builder(builder, encoder(tree_get(tree, children[0])));
+            write_string_builder(builder, encoder(tree_get_value(tree, children[0])));
             write_rune_builder(builder, ' ');
             write_rune_builder(builder, _ROOT_RUNE);
             write_rune_builder(builder, '\n');
@@ -173,7 +173,7 @@ build_string :: proc(builder : ^strings.Builder, tree : ^Tree($Value), key : int
 build_compressed_string :: proc(builder : ^strings.Builder, tree : ^Tree($Value), key : int, 
                     encoder : proc(str: Value) -> string) {
     using strings;
-    write_string_builder(builder, encoder(tree_get(tree, key)));
+    write_string_builder(builder, encoder(tree_get_value(tree, key)));
     children := tree_get_children(tree, key);
     if len(children) > 1 {
         write_rune_builder(builder, _BRANCH_RUNE);
@@ -188,7 +188,7 @@ build_compressed_string :: proc(builder : ^strings.Builder, tree : ^Tree($Value)
             write_rune_builder(builder, _ROOT_RUNE);
         } else {
             write_rune_builder(builder, _BRANCH_RUNE);
-            write_string_builder(builder, encoder(tree_get(tree, children[0])));
+            write_string_builder(builder, encoder(tree_get_value(tree, children[0])));
             write_rune_builder(builder, _ROOT_RUNE);
         }
     } else {
